@@ -1,0 +1,5 @@
+postgresql://postgres:yFQnvwbBznWDYkEBBZEfaoyVgyWeVjhM@autorack.proxy.rlwy.net:19728/railway
+
+PGPASSWORD=yFQnvwbBznWDYkEBBZEfaoyVgyWeVjhM psql -h autorack.proxy.rlwy.net -U postgres -p 19728 -d railway
+
+railway connect Postgres
