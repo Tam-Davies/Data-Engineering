@@ -76,3 +76,10 @@
 2026-Apr-12-18:54 : SQL Connection initiated.
 2026-Apr-12-18:54 : Data loaded to Database as table. Running the query
 2026-Apr-12-18:54 : Process Complete.
+2026-Aug-21-14:02 : Preliminaries complete. Initiating ETL process
+2026-Aug-21-14:07 : Data extraction complete. Initiating Transformation process
+2026-Aug-21-14:07 : Data transformation complete. Initiating loading process
+2026-Aug-21-14:07 : Data saved to CSV file
+2026-Aug-21-14:07 : SQL Connection initiated.
+2026-Aug-21-14:07 : Data loaded to Database as table. Running the query
+2026-Aug-21-14:07 : Process Complete.
