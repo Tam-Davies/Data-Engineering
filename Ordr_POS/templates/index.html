@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ORDR — Restaurant POS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--bg2:#161618;--bg3:#1e1e21;--bg4:#26262a;
+  --border:#2e2e33;--border2:#3a3a40;
+  --text:#f0efe8;--text2:#a0a09a;--text3:#5a5a60;
+  --accent:#e8813a;--accent2:#f0a060;--accent-bg:rgba(232,129,58,.12);
+  --green:#3ecf8e;--green-bg:rgba(62,207,142,.1);
+  --red:#e85555;--red-bg:rgba(232,85,85,.1);
+  --blue:#5599ff;--blue-bg:rgba(85,153,255,.1);
+  --amber:#f0c040;--amber-bg:rgba(240,192,64,.1);
+  --radius:10px;--radius-lg:16px;
+  --font-display:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;overflow:hidden}
+
+/* ── Layout ── */
+#app{display:grid;grid-template-rows:56px 1fr;height:100vh}
+#topbar{display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border);gap:16px;background:var(--bg)}
+#main{display:grid;grid-template-columns:220px 1fr 340px;height:100%;overflow:hidden}
+
+/* ── Topbar ── */
+.logo{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text)}
+.logo span{color:var(--accent)}
+.topbar-tabs{display:flex;gap:4px;margin-left:auto}
+.tab-btn{padding:6px 14px;border-radius:6px;border:none;background:none;color:var(--text2);font-family:var(--font-body);font-size:13px;font-weight:500;cursor:pointer;transition:.15s}
+.tab-btn.active,.tab-btn:hover{background:var(--bg3);color:var(--text)}
+.tab-btn.active{color:var(--accent)}
+.staff-pill{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--text2);margin-left:12px}
+.staff-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+
+/* ── Left: Tables sidebar ── */
+#sidebar{border-right:1px solid var(--border);overflow-y:auto;padding:16px 12px;background:var(--bg)}
+.sidebar-title{font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;padding:0 4px}
+.table-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.table-card{padding:10px 8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2);cursor:pointer;text-align:center;transition:.15s;position:relative}
+.table-card:hover{border-color:var(--border2);background:var(--bg3)}
+.table-card.selected{border-color:var(--accent);background:var(--accent-bg)}
+.table-card.occupied{border-color:var(--red);background:var(--red-bg)}
+.table-card.occupied.selected{border-color:var(--accent)}
+.table-num{font-family:var(--font-display);font-size:18px;font-weight:700}
+.table-status{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.table-card.occupied .table-status{color:var(--red)}
+.table-card.selected .table-status{color:var(--accent)}
+.takeaway-btn{width:100%;padding:10px;border-radius:var(--radius);border:1px dashed var(--border2);background:none;color:var(--text2);font-family:var(--font-body);font-size:13px;cursor:pointer;transition:.15s;margin-top:4px}
+.takeaway-btn:hover,.takeaway-btn.selected{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+
+/* ── Center: Menu ── */
+#menu-panel{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.menu-header{padding:16px 20px 0;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.menu-search{flex:1;padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-family:var(--font-body);font-size:13px;outline:none}
+.menu-search::placeholder{color:var(--text3)}
+.menu-search:focus{border-color:var(--border2)}
+.cat-tabs{display:flex;gap:6px;padding:14px 20px 0;overflow-x:auto;flex-shrink:0}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-pill{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:.15s;white-space:nowrap}
+.cat-pill.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.cat-pill:hover:not(.active){border-color:var(--border2);color:var(--text)}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:14px 20px;overflow-y:auto;align-content:start}
+.menu-item{padding:14px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2);cursor:pointer;transition:.15s;position:relative;overflow:hidden}
+.menu-item::before{content:'';position:absolute;inset:0;background:var(--accent);opacity:0;transition:.15s}
+.menu-item:hover::before{opacity:.04}
+.menu-item:hover{border-color:var(--border2);transform:translateY(-1px)}
+.menu-item:active{transform:translateY(0)}
+.item-emoji{font-size:28px;margin-bottom:8px}
+.item-name{font-weight:500;font-size:13px;line-height:1.3;margin-bottom:4px}
+.item-price{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:500}
+.item-added-flash{position:absolute;top:8px;right:8px;background:var(--green);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;opacity:0;transition:.3s;pointer-events:none}
+.menu-item.just-added .item-added-flash{opacity:1}
+
+/* ── Right: Order panel ── */
+#order-panel{border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg)}
+.order-header{padding:16px 16px 0;flex-shrink:0}
+.order-title{font-family:var(--font-display);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:space-between}
+.order-id{font-family:var(--font-mono);font-size:10px;color:var(--text3)}
+.order-meta{display:flex;align-items:center;gap:8px;margin-top:8px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.order-badge{font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500}
+.badge-table{background:var(--blue-bg);color:var(--blue)}
+.badge-staff{background:var(--amber-bg);color:var(--amber)}
+.badge-ta{background:var(--green-bg);color:var(--green)}
+.order-items{flex:1;overflow-y:auto;padding:10px 16px}
+.order-items::-webkit-scrollbar{width:4px}
+.order-items::-webkit-scrollbar-track{background:transparent}
+.order-items::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.empty-order{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--text3);font-size:13px}
+.empty-icon{font-size:40px;opacity:.4}
+.order-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.order-row:last-child{border-bottom:none}
+.order-row-name{flex:1;font-size:13px;font-weight:500}
+.order-row-sub{font-size:11px;color:var(--text3)}
+.qty-ctrl{display:flex;align-items:center;gap:6px}
+.qty-btn{width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.1s;flex-shrink:0}
+.qty-btn:hover{border-color:var(--accent);color:var(--accent)}
+.qty-num{font-family:var(--font-mono);font-size:13px;min-width:18px;text-align:center}
+.order-row-price{font-family:var(--font-mono);font-size:12px;color:var(--text2);min-width:50px;text-align:right}
+.del-btn{color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;border-radius:4px;transition:.1s;border:none;background:none;line-height:1}
+.del-btn:hover{color:var(--red)}
+.note-input{width:100%;margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-family:var(--font-body);font-size:12px;resize:none;outline:none}
+.note-input:focus{border-color:var(--border2)}
+.order-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0}
+.total-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px}
+.total-row.grand{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text);margin-top:8px;margin-bottom:12px}
+.total-row.grand span:last-child{color:var(--accent)}
+.action-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{padding:11px;border-radius:var(--radius);border:none;font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;text-align:center}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--border2);color:var(--text)}
+.btn-accent{background:var(--accent);color:#fff;grid-column:1/-1}
+.btn-accent:hover{background:var(--accent2)}
+.btn-accent:disabled{opacity:.4;cursor:not-allowed}
+.btn-green{background:var(--green);color:#0e0e0f;grid-column:1/-1}
+.btn-green:hover{filter:brightness(1.1)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{filter:brightness(1.1)}
+
+/* ── Orders View ── */
+#orders-view{display:none;flex-direction:column;overflow:hidden;background:var(--bg);grid-column:1/-1}
+#orders-view.active{display:flex}
+.orders-header{padding:20px 24px;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.orders-title{font-family:var(--font-display);font-size:20px;font-weight:800}
+.filter-btns{display:flex;gap:6px}
+.filter-btn{padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--text2);font-size:12px;cursor:pointer;transition:.15s}
+.filter-btn.active{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+.orders-list{overflow-y:auto;padding:16px 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-content:start}
+.order-card{padding:14px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2);cursor:pointer;transition:.15s}
+.order-card:hover{border-color:var(--border2);background:var(--bg3)}
+.oc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.oc-id{font-family:var(--font-mono);font-size:12px;font-weight:500}
+.oc-status{font-size:10px;padding:3px 9px;border-radius:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.oc-status.pending{background:var(--amber-bg);color:var(--amber)}
+.oc-status.paid{background:var(--green-bg);color:var(--green)}
+.oc-status.cancelled{background:var(--red-bg);color:var(--red)}
+.oc-items{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6}
+.oc-bottom{display:flex;justify-content:space-between;align-items:center}
+.oc-total{font-family:var(--font-mono);font-size:15px;font-weight:500;color:var(--accent)}
+.oc-meta{font-size:11px;color:var(--text3)}
+
+/* ── Analytics View ── */
+#analytics-view{display:none;flex-direction:column;overflow-y:auto;background:var(--bg);grid-column:1/-1;padding:24px}
+#analytics-view.active{display:flex}
+.analytics-title{font-family:var(--font-display);font-size:22px;font-weight:800;margin-bottom:20px}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{padding:18px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2)}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.stat-value{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:4px}
+.analytics-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.analytics-card{padding:18px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2)}
+.analytics-card-title{font-family:var(--font-display);font-size:14px;font-weight:700;margin-bottom:14px}
+.top-item-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ti-rank{font-family:var(--font-mono);font-size:11px;color:var(--text3);width:16px}
+.ti-bar-wrap{flex:1;height:6px;border-radius:3px;background:var(--bg4);overflow:hidden}
+.ti-bar{height:100%;border-radius:3px;background:var(--accent)}
+.ti-name{font-size:12px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ti-count{font-family:var(--font-mono);font-size:11px;color:var(--text3)}
+.period-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.period-card{padding:14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);text-align:center}
+.pc-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.pc-rev{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--accent)}
+.pc-orders{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;min-width:340px;max-width:480px;width:90%}
+.modal h2{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:16px}
+.modal-field{margin-bottom:12px}
+.modal-field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px}
+.modal-field input,.modal-field select{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:var(--font-body);font-size:13px;outline:none}
+.modal-field input:focus,.modal-field select:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-btn{padding:8px 18px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body)}
+.modal-cancel{background:var(--bg4);color:var(--text2)}
+.modal-confirm{background:var(--accent);color:#fff}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);transform:translateY(80px);opacity:0;transition:.3s;z-index:200;pointer-events:none;max-width:280px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{border-color:var(--green);color:var(--green)}
+#toast.error{border-color:var(--red);color:var(--red)}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Topbar ── -->
+  <header id="topbar">
+    <div class="logo">ORDR<span>.</span></div>
+    <div class="topbar-tabs">
+      <button class="tab-btn active" onclick="showView('pos')">🧾 POS</button>
+      <button class="tab-btn" onclick="showView('orders')">📋 Orders</button>
+      <button class="tab-btn" onclick="showView('analytics')">📊 Analytics</button>
+    </div>
+    <div class="staff-pill" onclick="openLoginModal()">
+      <div class="staff-dot"></div>
+      <span id="staff-name-display">Select Staff</span>
+    </div>
+  </header>
+
+  <!-- ── Main: POS layout ── -->
+  <div id="main">
+
+    <!-- Left: Tables -->
+    <aside id="sidebar">
+      <div class="sidebar-title">Tables</div>
+      <div class="table-grid" id="table-grid"></div>
+      <button class="takeaway-btn" id="takeaway-btn" onclick="selectTakeaway()">🛵 Take Away</button>
+    </aside>
+
+    <!-- Center: Menu -->
+    <section id="menu-panel">
+      <div class="menu-header">
+        <input class="menu-search" type="text" placeholder="Search menu…" oninput="filterMenu(this.value)" id="menu-search"/>
+      </div>
+      <div class="cat-tabs" id="cat-tabs"></div>
+      <div class="menu-grid" id="menu-grid"></div>
+    </section>
+
+    <!-- Right: Order -->
+    <aside id="order-panel">
+      <div class="order-header">
+        <div class="order-title">
+          Current Order
+          <span class="order-id" id="order-id-display">—</span>
+        </div>
+        <div class="order-meta">
+          <span class="order-badge badge-table" id="order-table-badge">No table</span>
+          <span class="order-badge badge-staff" id="order-staff-badge">No staff</span>
+        </div>
+      </div>
+      <div class="order-items" id="order-items">
+        <div class="empty-order">
+          <div class="empty-icon">🍽️</div>
+          <div>Select items to start an order</div>
+        </div>
+      </div>
+      <textarea class="note-input" id="order-note" rows="2" placeholder="Order notes…"></textarea>
+      <div class="order-footer">
+        <div class="total-row"><span>Subtotal</span><span id="subtotal-val">₦0.00</span></div>
+        <div class="total-row"><span>Tax (7.5%)</span><span id="tax-val">₦0.00</span></div>
+        <div class="total-row grand"><span>Total</span><span id="total-val">₦0.00</span></div>
+        <div class="action-btns">
+          <button class="btn btn-outline" onclick="clearOrder()">Clear</button>
+          <button class="btn btn-outline" onclick="discardOrder()">Discard</button>
+          <button class="btn btn-accent" id="place-btn" onclick="placeOrder()" disabled>Place Order</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Orders view (full-width overlay) -->
+    <section id="orders-view">
+      <div class="orders-header">
+        <div class="orders-title">Orders</div>
+        <div class="filter-btns">
+          <button class="filter-btn active" onclick="filterOrders('all',this)">All</button>
+          <button class="filter-btn" onclick="filterOrders('pending',this)">Pending</button>
+          <button class="filter-btn" onclick="filterOrders('paid',this)">Paid</button>
+          <button class="filter-btn" onclick="filterOrders('cancelled',this)">Cancelled</button>
+        </div>
+        <button class="btn btn-outline" style="margin-left:auto;padding:6px 14px" onclick="loadOrders()">↻ Refresh</button>
+      </div>
+      <div class="orders-list" id="orders-list"></div>
+    </section>
+
+    <!-- Analytics view -->
+    <section id="analytics-view">
+      <div class="analytics-title">Sales Analytics</div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="analytics-row">
+        <div class="analytics-card">
+          <div class="analytics-card-title">Revenue by Period</div>
+          <div class="period-cards" id="period-cards"></div>
+        </div>
+        <div class="analytics-card">
+          <div class="analytics-card-title">Top Selling Items</div>
+          <div id="top-items-list"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ── Staff Login Modal ── -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal">
+    <h2>Staff Login</h2>
+    <div class="modal-field">
+      <label>Select Staff</label>
+      <select id="login-staff-sel"></select>
+    </div>
+    <div class="modal-field">
+      <label>PIN</label>
+      <input type="password" id="login-pin" placeholder="••••" maxlength="4" oninput="if(this.value.length===4)doLogin()"/>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-cancel" onclick="closeModal('login-modal')">Cancel</button>
+      <button class="modal-btn modal-confirm" onclick="doLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Order Detail Modal ── -->
+<div class="modal-overlay" id="order-detail-modal">
+  <div class="modal">
+    <h2 id="od-title">Order Details</h2>
+    <div id="od-body"></div>
+    <div class="modal-actions" id="od-actions"></div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<script>
+const API = '';  // same origin; change to http://localhost:5000 for dev
+
+// ── State ──────────────────────────────────────────────────────────────────
+let menuData = {}, tableData = {}, staffData = [];
+let currentStaff = null, selectedTable = null, isTakeaway = false;
+let cartItems = [], currentOrderId = null;
+let activeCategory = 'All', allOrders = [], ordersFilter = 'all';
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([fetchMenu(), fetchTables(), fetchStaff()]);
+  renderTables();
+  renderCategories();
+  renderMenu();
+}
+
+// ── API helpers ────────────────────────────────────────────────────────────
+async function apiFetch(path, opts={}) {
+  const r = await fetch(API + path, {
+    headers: {'Content-Type':'application/json'},
+    ...opts
+  });
+  return r.json();
+}
+
+async function fetchMenu() {
+  const d = await apiFetch('/api/menu');
+  menuData = d.menu;
+}
+
+async function fetchTables() {
+  const d = await apiFetch('/api/tables');
+  d.tables.forEach(t => tableData[t.id] = t);
+}
+
+async function fetchStaff() {
+  const d = await apiFetch('/api/staff');
+  staffData = d.staff;
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────
+function showView(v) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active', ['pos','orders','analytics'][i]===v));
+  document.getElementById('sidebar').style.display = v==='pos'?'':'none';
+  document.getElementById('menu-panel').style.display = v==='pos'?'':'none';
+  document.getElementById('order-panel').style.display = v==='pos'?'':'none';
+  document.getElementById('orders-view').classList.toggle('active', v==='orders');
+  document.getElementById('analytics-view').classList.toggle('active', v==='analytics');
+  if(v==='orders') loadOrders();
+  if(v==='analytics') loadAnalytics();
+}
+
+// ── Tables ─────────────────────────────────────────────────────────────────
+function renderTables() {
+  const g = document.getElementById('table-grid');
+  g.innerHTML = Object.values(tableData).map(t=>`
+    <div class="table-card ${t.status} ${selectedTable===t.id?'selected':''}"
+         onclick="selectTable('${t.id}')">
+      <div class="table-num">${t.number}</div>
+      <div class="table-status">${t.status==='occupied'?'Occupied':`${t.seats} seats`}</div>
+    </div>`).join('');
+}
+
+function selectTable(id) {
+  selectedTable = id; isTakeaway = false;
+  document.getElementById('takeaway-btn').classList.remove('selected');
+  renderTables();
+  updateOrderMeta();
+}
+
+function selectTakeaway() {
+  selectedTable = null; isTakeaway = true;
+  renderTables();
+  document.getElementById('takeaway-btn').classList.add('selected');
+  updateOrderMeta();
+}
+
+// ── Menu ───────────────────────────────────────────────────────────────────
+function renderCategories() {
+  const cats = ['All', ...Object.keys(menuData)];
+  document.getElementById('cat-tabs').innerHTML = cats.map(c=>`
+    <button class="cat-pill ${c===activeCategory?'active':''}" onclick="setCategory('${c}')">${c}</button>`).join('');
+}
+
+function setCategory(c) {
+  activeCategory = c;
+  document.getElementById('menu-search').value = '';
+  renderCategories();
+  renderMenu();
+}
+
+function getFilteredItems(search='') {
+  let items = [];
+  if(activeCategory==='All') {
+    Object.values(menuData).forEach(arr => items.push(...arr));
+  } else {
+    items = menuData[activeCategory] || [];
+  }
+  if(search) items = items.filter(i=>i.name.toLowerCase().includes(search.toLowerCase()));
+  return items;
+}
+
+function filterMenu(q) { renderMenu(q); }
+
+function renderMenu(search='') {
+  const items = getFilteredItems(search);
+  document.getElementById('menu-grid').innerHTML = items.length ? items.map(item=>`
+    <div class="menu-item" id="mi-${item.id}" onclick="addToCart('${item.id}')">
+      <div class="item-emoji">${item.emoji}</div>
+      <div class="item-name">${item.name}</div>
+      <div class="item-price">₦${item.price.toFixed(2)}</div>
+      <div class="item-added-flash">+1</div>
+    </div>`).join('')
+  : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">No items found</div>`;
+}
+
+// ── Cart ───────────────────────────────────────────────────────────────────
+function addToCart(itemId) {
+  if(!selectedTable && !isTakeaway) { toast('Select a table or Take Away first','error'); return; }
+  if(!currentStaff) { toast('Please log in as staff first','error'); return; }
+  const item = Object.values(menuData).flat().find(i=>i.id===itemId);
+  if(!item) return;
+  const existing = cartItems.find(i=>i.id===itemId);
+  if(existing) { existing.qty++; }
+  else { cartItems.push({...item, qty:1}); }
+  const el = document.getElementById('mi-'+itemId);
+  if(el){ el.classList.add('just-added'); setTimeout(()=>el.classList.remove('just-added'),600); }
+  renderCart();
+}
+
+function changeQty(itemId, delta) {
+  const idx = cartItems.findIndex(i=>i.id===itemId);
+  if(idx===-1) return;
+  cartItems[idx].qty += delta;
+  if(cartItems[idx].qty <= 0) cartItems.splice(idx,1);
+  renderCart();
+}
+
+function removeItem(itemId) {
+  cartItems = cartItems.filter(i=>i.id!==itemId);
+  renderCart();
+}
+
+function renderCart() {
+  const container = document.getElementById('order-items');
+  if(!cartItems.length) {
+    container.innerHTML=`<div class="empty-order"><div class="empty-icon">🍽️</div><div>Select items to start an order</div></div>`;
+  } else {
+    container.innerHTML = cartItems.map(item=>`
+      <div class="order-row">
+        <div style="flex:1">
+          <div class="order-row-name">${item.emoji} ${item.name}</div>
+          <div class="order-row-sub">₦${item.price.toFixed(2)} each</div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+        </div>
+        <span class="order-row-price">₦${(item.price*item.qty).toFixed(2)}</span>
+        <button class="del-btn" onclick="removeItem('${item.id}')">×</button>
+      </div>`).join('');
+  }
+  const subtotal = cartItems.reduce((s,i)=>s+i.price*i.qty,0);
+  const tax = subtotal * 0.075;
+  const total = subtotal + tax;
+  document.getElementById('subtotal-val').textContent = '₦'+subtotal.toFixed(2);
+  document.getElementById('tax-val').textContent      = '₦'+tax.toFixed(2);
+  document.getElementById('total-val').textContent    = '₦'+total.toFixed(2);
+  document.getElementById('place-btn').disabled = cartItems.length === 0;
+}
+
+function clearOrder() { cartItems=[]; renderCart(); }
+function discardOrder() { cartItems=[]; selectedTable=null; isTakeaway=false; currentOrderId=null;
+  renderTables(); document.getElementById('takeaway-btn').classList.remove('selected');
+  renderCart(); updateOrderMeta(); document.getElementById('order-id-display').textContent='—';
+}
+
+function updateOrderMeta() {
+  const tb = document.getElementById('order-table-badge');
+  const sb = document.getElementById('order-staff-badge');
+  if(isTakeaway){ tb.textContent='Take Away'; tb.className='order-badge badge-ta'; }
+  else if(selectedTable){ tb.textContent='Table '+tableData[selectedTable]?.number; tb.className='order-badge badge-table'; }
+  else { tb.textContent='No table'; tb.className='order-badge badge-table'; }
+  sb.textContent = currentStaff ? currentStaff.name : 'No staff';
+}
+
+// ── Place Order ────────────────────────────────────────────────────────────
+async function placeOrder() {
+  if(!cartItems.length) return;
+  const payload = {
+    table_id: selectedTable,
+    staff_id: currentStaff?.id,
+    note: document.getElementById('order-note').value,
+    items: cartItems.map(i=>({id:i.id, name:i.name, price:i.price, qty:i.qty, emoji:i.emoji}))
+  };
+  const d = await apiFetch('/api/orders', {method:'POST', body:JSON.stringify(payload)});
+  if(d.success) {
+    currentOrderId = d.order.id;
+    document.getElementById('order-id-display').textContent = d.order.id;
+    toast('Order placed: '+d.order.id,'success');
+    await fetchTables(); renderTables();
+    cartItems=[];
+    document.getElementById('order-note').value='';
+    renderCart();
+  } else { toast('Failed to place order','error'); }
+}
+
+// ── Staff Auth ─────────────────────────────────────────────────────────────
+function openLoginModal() {
+  const sel = document.getElementById('login-staff-sel');
+  sel.innerHTML = staffData.map(s=>`<option value="${s.id}">${s.name} (${s.role})</option>`).join('');
+  document.getElementById('login-pin').value='';
+  openModal('login-modal');
+}
+
+async function doLogin() {
+  const staffId = document.getElementById('login-staff-sel').value;
+  const pin     = document.getElementById('login-pin').value;
+  const staffMember = staffData.find(s=>s.id===staffId);
+  const d = await apiFetch('/api/staff/login', {method:'POST', body:JSON.stringify({name:staffMember?.name, pin})});
+  if(d.success) {
+    currentStaff = d.staff;
+    document.getElementById('staff-name-display').textContent = d.staff.name;
+    closeModal('login-modal');
+    toast('Welcome, '+d.staff.name+'!','success');
+    updateOrderMeta();
+  } else { toast('Wrong PIN','error'); }
+}
+
+// ── Orders View ────────────────────────────────────────────────────────────
+async function loadOrders() {
+  const d = await apiFetch('/api/orders');
+  allOrders = d.orders;
+  renderOrdersList();
+}
+
+function filterOrders(f, btn) {
+  ordersFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderOrdersList();
+}
+
+function renderOrdersList() {
+  const filtered = ordersFilter==='all' ? allOrders : allOrders.filter(o=>o.status===ordersFilter);
+  const list = document.getElementById('orders-list');
+  if(!filtered.length){ list.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text3)">No orders</div>`; return; }
+  list.innerHTML = filtered.map(o=>`
+    <div class="order-card" onclick="openOrderDetail('${o.id}')">
+      <div class="oc-top">
+        <div class="oc-id">${o.id}</div>
+        <div class="oc-status ${o.status}">${o.status}</div>
+      </div>
+      <div class="oc-items">${o.items.map(i=>`${i.emoji} ${i.name} ×${i.qty}`).join(' · ')}</div>
+      <div class="oc-bottom">
+        <div class="oc-total">₦${o.total?.toFixed(2)}</div>
+        <div class="oc-meta">Table ${o.table_no} · ${o.staff_name}</div>
+      </div>
+    </div>`).join('');
+}
+
+async function openOrderDetail(orderId) {
+  const d = await apiFetch('/api/orders/'+orderId);
+  const o = d;
+  document.getElementById('od-title').textContent = 'Order '+o.id;
+  document.getElementById('od-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+      <div>Table: <b style="color:var(--text)">${o.table_no}</b></div>
+      <div>Staff: <b style="color:var(--text)">${o.staff_name}</b></div>
+      <div>Status: <span class="oc-status ${o.status}" style="font-size:10px">${o.status}</span></div>
+      <div>Time: <b style="color:var(--text)">${new Date(o.created_at).toLocaleTimeString()}</b></div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px">
+      ${o.items.map(i=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0">
+        <span>${i.emoji} ${i.name} ×${i.qty}</span>
+        <span style="font-family:var(--font-mono);color:var(--accent)">₦${(i.price*i.qty).toFixed(2)}</span>
+      </div>`).join('')}
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:10px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;color:var(--text2);margin-bottom:4px"><span>Subtotal</span><span>₦${o.subtotal?.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;color:var(--text2);margin-bottom:4px"><span>Tax</span><span>₦${o.tax?.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:600;font-size:15px;margin-top:6px"><span>Total</span><span style="color:var(--accent)">₦${o.total?.toFixed(2)}</span></div>
+    </div>
+    ${o.note?`<div style="margin-top:10px;font-size:12px;color:var(--text3);font-style:italic">Note: ${o.note}</div>`:''}
+  `;
+  const actions = document.getElementById('od-actions');
+  actions.innerHTML = `<button class="modal-btn modal-cancel" onclick="closeModal('order-detail-modal')">Close</button>`;
+  if(o.status==='pending'){
+    actions.innerHTML += `
+      <button class="modal-btn" style="background:var(--red-bg);color:var(--red)" onclick="updateStatus('${o.id}','cancelled')">Cancel</button>
+      <button class="modal-btn modal-confirm" onclick="updateStatus('${o.id}','paid')">Mark Paid ✓</button>`;
+  }
+  openModal('order-detail-modal');
+}
+
+async function updateStatus(orderId, status) {
+  await apiFetch('/api/orders/'+orderId+'/status', {method:'PUT', body:JSON.stringify({status})});
+  closeModal('order-detail-modal');
+  toast('Order '+status,'success');
+  loadOrders();
+}
+
+// ── Analytics ──────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  const d = await apiFetch('/api/analytics/summary');
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Today's Revenue</div><div class="stat-value">₦${d.today.revenue.toFixed(0)}</div><div class="stat-sub">${d.today.orders} orders</div></div>
+    <div class="stat-card"><div class="stat-label">Pending Orders</div><div class="stat-value">${d.pending}</div><div class="stat-sub">awaiting payment</div></div>
+    <div class="stat-card"><div class="stat-label">Active Tables</div><div class="stat-value">${d.active_tables}</div><div class="stat-sub">of ${Object.keys(tableData).length} total</div></div>
+    <div class="stat-card"><div class="stat-label">Total Revenue</div><div class="stat-value">₦${d.total.revenue.toFixed(0)}</div><div class="stat-sub">${d.total.orders} all-time orders</div></div>
+  `;
+  document.getElementById('period-cards').innerHTML = `
+    <div class="period-card"><div class="pc-label">Today</div><div class="pc-rev">₦${d.today.revenue.toFixed(0)}</div><div class="pc-orders">${d.today.orders} orders</div></div>
+    <div class="period-card"><div class="pc-label">This Week</div><div class="pc-rev">₦${d.week.revenue.toFixed(0)}</div><div class="pc-orders">${d.week.orders} orders</div></div>
+    <div class="period-card"><div class="pc-label">This Month</div><div class="pc-rev">₦${d.month.revenue.toFixed(0)}</div><div class="pc-orders">${d.month.orders} orders</div></div>
+  `;
+  const maxCount = d.top_items[0]?.[1] || 1;
+  document.getElementById('top-items-list').innerHTML = d.top_items.length
+    ? d.top_items.map(([name,count],i)=>`
+        <div class="top-item-row">
+          <span class="ti-rank">#${i+1}</span>
+          <span class="ti-name">${name}</span>
+          <div class="ti-bar-wrap"><div class="ti-bar" style="width:${(count/maxCount)*100}%"></div></div>
+          <span class="ti-count">${count}</span>
+        </div>`).join('')
+    : '<div style="color:var(--text3);font-size:12px">No sales data yet</div>';
+}
+
+// ── Modals ─────────────────────────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.className='', 2800);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ORDR — Pipeline Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--bg2:#161618;--bg3:#1e1e21;--bg4:#26262a;
+  --border:#2e2e33;--border2:#3a3a40;
+  --text:#f0efe8;--text2:#a0a09a;--text3:#5a5a60;
+  --accent:#e8813a;--accent2:#f0a060;
+  --green:#3ecf8e;--green-bg:rgba(62,207,142,.1);
+  --red:#e85555;--red-bg:rgba(232,85,85,.1);
+  --amber:#f0c040;--amber-bg:rgba(240,192,64,.1);
+  --blue:#5599ff;--blue-bg:rgba(85,153,255,.1);
+  --fd:'Syne',sans-serif;--fb:'DM Sans',sans-serif;--fm:'DM Mono',monospace;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px}
+#app{display:grid;grid-template-rows:56px 1fr;height:100vh}
+/* topbar */
+#topbar{display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--border);gap:16px}
+.logo{font-family:var(--fd);font-size:20px;font-weight:800;letter-spacing:-.5px}
+.logo span{color:var(--accent)}
+.topbar-links{display:flex;gap:4px;margin-left:auto}
+.tl{padding:6px 14px;border-radius:6px;border:none;background:none;color:var(--text2);
+  font-family:var(--fb);font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;transition:.15s}
+.tl:hover,.tl.active{background:var(--bg3);color:var(--text)}
+.tl.active{color:var(--accent)}
+.staff-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:16px;
+  background:var(--bg3);border:1px solid var(--border);font-size:12px;color:var(--text2)}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+/* content */
+#content{overflow-y:auto;padding:24px}
+.page-title{font-family:var(--fd);font-size:22px;font-weight:800;margin-bottom:6px}
+.page-sub{font-size:12px;color:var(--text3);margin-bottom:24px}
+/* stat row */
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px}
+.stat-card{padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg2)}
+.sl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.sv{font-family:var(--fd);font-size:26px;font-weight:800}
+.ss{font-size:11px;color:var(--text2);margin-top:3px}
+.sv.green{color:var(--green)}.sv.red{color:var(--red)}.sv.amber{color:var(--amber)}
+/* section */
+.section{margin-bottom:28px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-family:var(--fd);font-size:15px;font-weight:700}
+.refresh-btn{padding:5px 12px;border-radius:8px;border:1px solid var(--border);
+  background:none;color:var(--text2);font-size:12px;cursor:pointer;transition:.15s}
+.refresh-btn:hover{border-color:var(--border2);color:var(--text)}
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{padding:9px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bg3)}
+.badge{font-size:10px;padding:3px 9px;border-radius:10px;font-weight:600;display:inline-block}
+.b-success{background:var(--green-bg);color:var(--green)}
+.b-failed{background:var(--red-bg);color:var(--red)}
+.b-running{background:var(--amber-bg);color:var(--amber)}
+.b-drop{background:var(--red-bg);color:var(--red)}
+.b-spike{background:var(--green-bg);color:var(--green)}
+.b-low{background:var(--amber-bg);color:var(--amber)}
+.mono{font-family:var(--fm);font-size:12px}
+.card-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+/* export section */
+.export-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.export-card{padding:16px;border-radius:12px;border:1px solid var(--border);
+  background:var(--bg2);display:flex;flex-direction:column;gap:8px}
+.ec-icon{font-size:22px}
+.ec-title{font-size:13px;font-weight:600}
+.ec-desc{font-size:11px;color:var(--text3);line-height:1.5}
+.ec-links{display:flex;gap:6px;flex-wrap:wrap}
+.ec-link{padding:5px 10px;border-radius:6px;border:1px solid var(--border);
+  background:none;color:var(--accent);font-size:11px;font-weight:600;
+  text-decoration:none;transition:.15s;cursor:pointer}
+.ec-link:hover{background:var(--bg3);border-color:var(--border2)}
+.ec-link.json{color:var(--blue)}
+/* last sync */
+.last-sync{font-family:var(--fm);font-size:11px;color:var(--text3)}
+.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--green);margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="logo">ORDR<span>.</span></div>
+    <nav class="topbar-links">
+      <a class="tl" href="/">🧾 POS</a>
+      <a class="tl active" href="/monitor">📡 Monitor</a>
+    </nav>
+    <div class="staff-chip">
+      <div class="chip-dot"></div>
+      <span id="staff-display">Loading…</span>
+    </div>
+  </header>
+
+  <div id="content">
+    <div class="page-title">Pipeline Monitor</div>
+    <div class="page-sub">
+      <span class="pulse"></span>
+      <span class="last-sync" id="last-sync-label">Checking pipeline…</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-row" id="stat-row">
+      <div class="stat-card"><div class="sl">Total Runs</div><div class="sv" id="s-runs">—</div></div>
+      <div class="stat-card"><div class="sl">Success Rate</div><div class="sv green" id="s-rate">—</div></div>
+      <div class="stat-card"><div class="sl">Failed Runs</div><div class="sv red" id="s-failed">—</div></div>
+      <div class="stat-card"><div class="sl">Total Alerts</div><div class="sv amber" id="s-alerts">—</div></div>
+      <div class="stat-card"><div class="sl">Orders Synced</div><div class="sv" id="s-orders">—</div><div class="ss">paid orders in DB</div></div>
+    </div>
+
+    <!-- Pipeline Runs -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Pipeline Runs <span style="color:var(--text3);font-weight:400;font-size:12px">(last 50)</span></div>
+        <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+      </div>
+      <div class="card-wrap">
+        <table class="tbl">
+          <thead><tr>
+            <th>ID</th><th>Type</th><th>Status</th><th>Records</th>
+            <th>Started</th><th>Duration</th><th>Error</th>
+          </tr></thead>
+          <tbody id="runs-body"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Alert Log -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Alert Log <span style="color:var(--text3);font-weight:400;font-size:12px">(last 100)</span></div>
+      </div>
+      <div class="card-wrap">
+        <table class="tbl">
+          <thead><tr>
+            <th>Time</th><th>Type</th><th>Period</th><th>Change</th><th>Channels</th><th>Message</th>
+          </tr></thead>
+          <tbody id="alerts-body"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Data Exports -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Data Exports</div>
+        <span style="font-size:11px;color:var(--text3)">For Power BI, Excel, or manual pulls</span>
+      </div>
+      <div class="export-grid">
+        <div class="export-card">
+          <div class="ec-icon">🧾</div>
+          <div class="ec-title">Orders</div>
+          <div class="ec-desc">All paid orders with totals, staff, and table info</div>
+          <div class="ec-links">
+            <a class="ec-link" href="/api/export/orders">↓ CSV</a>
+            <a class="ec-link json" href="/api/export/orders?format=json" target="_blank">{ } JSON</a>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="ec-icon">📦</div>
+          <div class="ec-title">Order Items</div>
+          <div class="ec-desc">Line-item breakdown per order with categories</div>
+          <div class="ec-links">
+            <a class="ec-link" href="/api/export/items">↓ CSV</a>
+            <a class="ec-link json" href="/api/export/items?format=json" target="_blank">{ } JSON</a>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="ec-icon">📅</div>
+          <div class="ec-title">Daily Summary</div>
+          <div class="ec-desc">Aggregated daily revenue, order counts, top items</div>
+          <div class="ec-links">
+            <a class="ec-link" href="/api/export/daily-summary">↓ CSV</a>
+            <a class="ec-link json" href="/api/export/daily-summary?format=json" target="_blank">{ } JSON</a>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="ec-icon">📆</div>
+          <div class="ec-title">Weekly Summary</div>
+          <div class="ec-desc">Week-over-week revenue with % change</div>
+          <div class="ec-links">
+            <a class="ec-link" href="/api/export/weekly-summary">↓ CSV</a>
+            <a class="ec-link json" href="/api/export/weekly-summary?format=json" target="_blank">{ } JSON</a>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="ec-icon">📊</div>
+          <div class="ec-title">Monthly Summary</div>
+          <div class="ec-desc">Month-over-month revenue with % change</div>
+          <div class="ec-links">
+            <a class="ec-link" href="/api/export/monthly-summary">↓ CSV</a>
+            <a class="ec-link json" href="/api/export/monthly-summary?format=json" target="_blank">{ } JSON</a>
+          </div>
+        </div>
+        <div class="export-card">
+          <div class="ec-icon">📋</div>
+          <div class="ec-title">Date Range Orders</div>
+          <div class="ec-desc">Filter orders by custom date range</div>
+          <div class="ec-links">
+            <button class="ec-link" onclick="exportDateRange()">↓ CSV</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <input type="date" id="exp-from" style="flex:1;padding:5px 8px;border-radius:6px;
+              border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:11px;outline:none"/>
+            <input type="date" id="exp-to" style="flex:1;padding:5px 8px;border-radius:6px;
+              border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:11px;outline:none"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fmt_time(iso){
+  if(!iso)return'—';
+  const d=new Date(iso);
+  return d.toLocaleDateString()+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+function fmt_dur(s){
+  if(s===null||s===undefined)return'—';
+  return s<60?s+'s':Math.round(s/60)+'m '+Math.round(s%60)+'s';
+}
+
+async function loadStats(){
+  try{
+    const d=await(await fetch('/api/monitor/stats',{credentials:'include'})).json();
+    document.getElementById('s-runs').textContent   = d.total_runs;
+    document.getElementById('s-rate').textContent   = d.success_rate+'%';
+    document.getElementById('s-failed').textContent = d.failed_runs;
+    document.getElementById('s-alerts').textContent = d.total_alerts;
+    document.getElementById('s-orders').textContent = d.total_orders_synced;
+    document.getElementById('last-sync-label').textContent =
+      d.last_success ? 'Last successful run: '+fmt_time(d.last_success) : 'No runs yet';
+  }catch(e){console.error(e)}
+}
+
+async function loadRuns(){
+  try{
+    const d=await(await fetch('/api/monitor/pipeline-runs',{credentials:'include'})).json();
+    const body=document.getElementById('runs-body');
+    if(!d.runs.length){
+      body.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">No pipeline runs yet — start scheduler.py</td></tr>';
+      return;
+    }
+    body.innerHTML=d.runs.map(r=>`
+      <tr>
+        <td class="mono">${r.id}</td>
+        <td>${r.run_type}</td>
+        <td><span class="badge b-${r.status}">${r.status}</span></td>
+        <td class="mono">${r.records_processed??'—'}</td>
+        <td class="mono">${fmt_time(r.started_at)}</td>
+        <td class="mono">${fmt_dur(r.duration_s)}</td>
+        <td style="color:var(--red);font-size:11px;max-width:200px;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap">${r.error_message||'—'}</td>
+      </tr>`).join('');
+  }catch(e){console.error(e)}
+}
+
+async function loadAlerts(){
+  try{
+    const d=await(await fetch('/api/monitor/alerts',{credentials:'include'})).json();
+    const body=document.getElementById('alerts-body');
+    if(!d.alerts.length){
+      body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No alerts fired yet</td></tr>';
+      return;
+    }
+    body.innerHTML=d.alerts.map(a=>{
+      const cls=a.alert_type.includes('drop')?'b-drop':a.alert_type.includes('spike')?'b-spike':'b-low';
+      const pct=a.change_pct!=null?`${a.change_pct>0?'+':''}${a.change_pct.toFixed(1)}%`:'—';
+      return`<tr>
+        <td class="mono">${fmt_time(a.sent_at)}</td>
+        <td><span class="badge ${cls}">${a.alert_type.replace('_',' ')}</span></td>
+        <td>${a.period}</td>
+        <td class="mono" style="color:${a.change_pct<0?'var(--red)':'var(--green)'}">${pct}</td>
+        <td style="font-size:11px">${(a.channels||[]).join(', ')||'logged'}</td>
+        <td style="font-size:12px;color:var(--text2);max-width:260px">${a.message||'—'}</td>
+      </tr>`;
+    }).join('');
+  }catch(e){console.error(e)}
+}
+
+async function loadMe(){
+  try{
+    const d=await(await fetch('/api/auth/me',{credentials:'include'})).json();
+    document.getElementById('staff-display').textContent=d.logged_in?d.staff.name:'Guest';
+  }catch(e){}
+}
+
+function exportDateRange(){
+  const f=document.getElementById('exp-from').value;
+  const t=document.getElementById('exp-to').value;
+  let url='/api/export/orders?';
+  if(f)url+='from_date='+f+'&';
+  if(t)url+='to_date='+t;
+  window.location.href=url;
+}
+
+async function loadAll(){
+  await Promise.all([loadStats(),loadRuns(),loadAlerts()]);
+}
+
+loadMe();
+loadAll();
+setInterval(loadAll, 30000); // auto-refresh every 30s
+</script>
+</body>
+</html>
