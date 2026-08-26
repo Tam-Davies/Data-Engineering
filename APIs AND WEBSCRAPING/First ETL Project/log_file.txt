@@ -14,3 +14,11 @@
 2026-Aug-21-14:32:25,Load phase Started
 2026-Aug-21-14:32:25,Load phase Ended
 2026-Aug-21-14:32:25,ETL Job Ended
+2026-Aug-23-15:29:02,ETL Job Started
+2026-Aug-23-15:29:02,Extract phase Started
+2026-Aug-23-15:29:02,Extract phase Ended
+2026-Aug-23-15:29:02,Transform phase Started
+2026-Aug-23-15:29:02,Transform phase Ended
+2026-Aug-23-15:29:02,Load phase Started
+2026-Aug-23-15:29:02,Load phase Ended
+2026-Aug-23-15:29:02,ETL Job Ended
