@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     df = extract_data()
 
-    df.to_csv("US_REVENUE_DATA.csv", index=False)
+    df.to_csv("webscraping (Wikipedia ETL)/US_REVENUE_DATA.csv", index=False)
 
     print(df.head())
     print(df.shape)
