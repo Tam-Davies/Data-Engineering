@@ -1,50 +1,83 @@
 import os
 import requests
-from dotenv import load_dotenv
 import pandas as pd
+from dotenv import load_dotenv
+
 
 load_dotenv()
-token = os.getenv("TMDB_READ_ACCESS_TOKEN")
 
-headers = {
-    "Authorization": f"Bearer {token}",
+TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
+
+BASE_URL = "https://api.themoviedb.org/3"
+
+HEADERS = {
+    "Authorization": f"Bearer {TOKEN}",
     "accept": "application/json"
 }
 
+
 def extract_popular_movies():
-    response = requests.get('https://api.themoviedb.org/3/movie/popular', headers=headers)
+
+    url = f"{BASE_URL}/movie/popular"
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        timeout=30
+    )
+
     response.raise_for_status()
 
     data = response.json()
-    df_popular_movies = pd.DataFrame(data['results'])
 
-    return df_popular_movies
+    return pd.DataFrame(data["results"])
 
 
 def extract_popular_tv():
-    response = requests.get('https://api.themoviedb.org/3/tv/popular', headers=headers)
+
+    url = f"{BASE_URL}/tv/popular"
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        timeout=30
+    )
+
     response.raise_for_status()
 
     data = response.json()
-    df_popular_tv = pd.DataFrame(data['results'])
 
-    return df_popular_tv
+    return pd.DataFrame(data["results"])
 
 
 def extract_movie_list():
-    response = requests.get('https://api.themoviedb.org/3/genre/movie/list', headers=headers)
+
+    url = f"{BASE_URL}/genre/movie/list"
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        timeout=30
+    )
+
     response.raise_for_status()
 
     data = response.json()
-    df_movie_list = pd.DataFrame(data['genres'])
 
-    return df_movie_list
+    return pd.DataFrame(data["genres"])
 
 
-df_movies = extract_popular_movies()
-df_tv = extract_popular_tv()
-df_genres = extract_movie_list()
+if __name__ == "__main__":
 
-print(df_movies.head())
-print(df_tv.head())
-print(df_genres.head())
+    df_movies = extract_popular_movies()
+    df_tv = extract_popular_tv()
+    df_genres = extract_movie_list()
+
+    print("Movies:")
+    print(df_movies.head())
+
+    print("\nTV:")
+    print(df_tv.head())
+
+    print("\nGenres:")
+    print(df_genres.head())
