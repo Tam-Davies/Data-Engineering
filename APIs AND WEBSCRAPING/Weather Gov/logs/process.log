@@ -1,0 +1,5 @@
+2026-08-29 14:13:09,902 - INFO - Starting ETL pipeline
+2026-08-29 14:13:09,904 - INFO - Starting data extraction
+2026-08-29 14:13:10,906 - INFO - Starting data transformation
+2026-08-29 14:13:10,935 - INFO - Starting BigQuery load
+2026-08-29 14:13:10,953 - WARNING - No project ID could be determined. Consider running `gcloud config set project` or setting the GOOGLE_CLOUD_PROJECT environment variable

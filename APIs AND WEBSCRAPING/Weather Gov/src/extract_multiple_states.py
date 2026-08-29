@@ -15,4 +15,4 @@ def extract(regions):
 
 if __name__ == '__main__':
     extracts = extract("NY,CA,TX")
-    print(extracts)
+    print(extracts.info())

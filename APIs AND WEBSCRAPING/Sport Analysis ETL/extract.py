@@ -48,5 +48,5 @@ if __name__ == '__main__':
 
     params = [df_competition, df_matches, df_teams]
     for p in params:
-        print(p.head())
+        print(p.info())
 

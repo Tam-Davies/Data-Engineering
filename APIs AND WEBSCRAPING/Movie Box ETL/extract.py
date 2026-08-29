@@ -73,11 +73,11 @@ if __name__ == "__main__":
     df_tv = extract_popular_tv()
     df_genres = extract_movie_list()
 
-    print("Movies:")
-    print(df_movies.head())
+    # print("Movies:")
+    # print(df_movies.info())
 
-    print("\nTV:")
-    print(df_tv.head())
+    # print("\nTV:")
+    # print(df_tv.info())
 
     print("\nGenres:")
-    print(df_genres.head())
+    print(df_genres.info())

@@ -24,11 +24,13 @@ def extract(per_page=100, page=1):
     response.raise_for_status()
     data = response.json()
     df = pd.DataFrame(data)
-    return df
+    cols_to_keep = ['symbol', 'name', 'current_price', 'market_cap',
+                 'market_cap_rank', 'total_volume', 'last_updated']
+    return df[cols_to_keep]
    
 
-if __name__ == '__main__':
-    df = extract()
-    print(df.shape)
-    print(df.head())
-    df.to_csv('CoinGecko Pricing/coin_prices.csv', index=False)
+# if __name__ == '__main__':
+#     df = extract()
+#     print(df.shape)
+#     print(df.head())
+    

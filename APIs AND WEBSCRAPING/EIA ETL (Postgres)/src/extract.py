@@ -52,7 +52,6 @@ def extract_data():
     return df
 
 
-if __name__ == '__main__':
-    df = extract_data()
-    print(df.head())
-    print(df.shape)
+# if __name__ == '__main__':
+#     df = extract_data()
+#     print(df['process'])
