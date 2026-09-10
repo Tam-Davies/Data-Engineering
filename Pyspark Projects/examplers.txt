@@ -1,0 +1,4 @@
+spark_df.na.fill('enter raplacement string', 'column name)
+it can take multiple columns as well
+
+you can also use imputer from spark.ml.feature imputer module
