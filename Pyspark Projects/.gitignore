@@ -1,0 +1,8 @@
+# Local datasets and Spark-generated output
+Salaries Dataset/salaries.csv
+Salaries Dataset/output/
+First Pyspark Project/output/
+
+# Spark and notebook runtime files
+**/.sparkStaging/
+**/.ipynb_checkpoints/
