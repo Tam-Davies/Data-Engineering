@@ -19,19 +19,19 @@ The notebook performs the following tasks:
 
 ```text
 Yellow Trip ETL/
-├── data/
-│   └── *.csv
+├── data/                     # Raw source files removed from GitHub due to file-size limits
 ├── notebooks/
 │   ├── exploratory data analysis.ipynb
 │   ├── database_migration.ipynb
 │   └── database_migration.md
-├── output/
+├── output/                   # Processed Parquet output removed from GitHub due to size limits
 │   └── nyc_taxi_processed/
 ├── QREADME.md
 ├── README.md
-└── output/
-    └── nyc_taxi_processed/
+└── .gitignore               # Excludes large datasets from version control
 ```
+
+> Note: The raw CSV files and processed Parquet output were intentionally deleted from this repository because they were too large to push to GitHub. The ETL notebooks remain in place so the project can be rerun locally with the dataset restored.
 
 ## Database Migration
 
@@ -140,6 +140,8 @@ The notebook compares the original processed row count with the Parquet row coun
 
 ## Notes
 
+- The raw CSV files and processed Parquet output were removed from GitHub because they exceeded repository size limits.
 - The output path is relative to the notebook's current working directory.
 - The notebook may require additional driver memory for large datasets.
 - Spark must be configured with a compatible Java installation.
+- To reproduce the project locally, restore the `data/` CSV files and run the ETL notebook to regenerate `output/nyc_taxi_processed`.
