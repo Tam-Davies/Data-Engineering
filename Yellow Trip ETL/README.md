@@ -22,11 +22,29 @@ Yellow Trip ETL/
 ├── data/
 │   └── *.csv
 ├── notebooks/
-│   └── exploratory data analysis.ipynb
+│   ├── exploratory data analysis.ipynb
+│   ├── database_migration.ipynb
+│   └── database_migration.md
 ├── output/
 │   └── nyc_taxi_processed/
-└── README.md
+├── QREADME.md
+├── README.md
+└── output/
+    └── nyc_taxi_processed/
 ```
+
+## Database Migration
+
+The project now includes a PostgreSQL migration workflow in `notebooks/database_migration.ipynb`.
+
+This notebook:
+
+- loads the processed Parquet dataset from `output/nyc_taxi_processed`
+- configures a Spark session with the PostgreSQL JDBC driver
+- writes the consolidated dataset to a PostgreSQL table
+- validates the migrated row count after the load
+
+Use the companion note in `notebooks/database_migration.md` for the step-by-step migration process and environment assumptions.
 
 ## Requirements
 
