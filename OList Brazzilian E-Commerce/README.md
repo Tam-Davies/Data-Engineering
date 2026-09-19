@@ -38,6 +38,19 @@ flowchart LR
 | `dim_date` | Purchase dates, weekday labels, and weekend flags |
 | `fact_orders` | Order, item, payment, and review measures with dimension keys |
 
+## SCD process
+
+The project includes a dedicated Slowly Changing Dimension (SCD) workflow under [`SCD/`](SCD). This pattern is used to manage dimension changes over time for customer data in the warehouse without losing historical context.
+
+The process is:
+
+1. `staging.sql` creates a temporary `stg_customer_updates` table and loads a small sample of current customer rows from `dim_customer`.
+2. `cdc_detection.sql` compares the staged data with the active dimension row to detect attribute changes, such as a city or state update.
+3. `scd_type_1.sql` applies overwrite logic for attributes that should reflect the latest value only.
+4. `scd_type_2.sql` keeps the old record as history, closes the active row with a `valid_to` timestamp, and inserts a new current record with a new validity period.
+
+This pattern is useful when a business dimension like customer address changes over time. Type 1 is used for non-historical overwrite behavior, while Type 2 preserves history for auditability and trend analysis.
+
 ## Repository layout
 
 ```text
@@ -52,7 +65,12 @@ flowchart LR
 │   └── silver/              Silver Parquet output
 ├── Gold/
 │   └── notebook.ipynb       Dimensional model and PostgreSQL publishing
-└── ERD.pgerd                PostgreSQL/pgAdmin ERD definition
+├── SCD/
+│   ├── staging.sql          Creates a staging table for incoming customer changes
+│   ├── cdc_detection.sql    Detects differences between staged and current rows
+│   ├── scd_type_1.sql       Overwrites the newest value for Type 1 change handling
+│   └── scd_type_2.sql       Closes prior row and creates a new historical version
+├── ERD.pgerd                PostgreSQL/pgAdmin ERD definition
 ```
 
 ## Prerequisites
