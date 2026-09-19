@@ -38,18 +38,40 @@ flowchart LR
 | `dim_date` | Purchase dates, weekday labels, and weekend flags |
 | `fact_orders` | Order, item, payment, and review measures with dimension keys |
 
-## SCD process
+# SCD & CDC — Olist Gold Layer
 
-The project includes a dedicated Slowly Changing Dimension (SCD) workflow under [`SCD/`](SCD). This pattern is used to manage dimension changes over time for customer data in the warehouse without losing historical context.
+SQL scripts implementing Change Data Capture and Slowly Changing Dimension
+handling on top of the `dim_customer` table in the Gold-layer star schema.
 
-The process is:
+## Run order
 
-1. `staging.sql` creates a temporary `stg_customer_updates` table and loads a small sample of current customer rows from `dim_customer`.
-2. `cdc_detection.sql` compares the staged data with the active dimension row to detect attribute changes, such as a city or state update.
-3. `scd_type_1.sql` applies overwrite logic for attributes that should reflect the latest value only.
-4. `scd_type_2.sql` keeps the old record as history, closes the active row with a `valid_to` timestamp, and inserts a new current record with a new validity period.
+1. `01_staging_setup.sql` — builds/refreshes `stg_customer_updates`, a
+staging table simulating incoming source data.
+2. `02_cdc_detection.sql` — compares staging against the live dimension
+table and returns only the rows that actually changed.
+3. `03_scd_type1.sql` — applies a detected change as a destructive
+overwrite. Use when history doesn't matter (e.g. a typo correction).
+4. `04_scd_type2.sql` — applies a detected change as a new versioned row,
+preserving the old one. Use when the change is a real historical fact
+(e.g. a customer relocating).
 
-This pattern is useful when a business dimension like customer address changes over time. Type 1 is used for non-historical overwrite behavior, while Type 2 preserves history for auditability and trend analysis.
+`reset_constraints.sql` / `restore_constraints.sql` are separate, general
+purpose scripts for the Gold layer as a whole — run `reset` before any
+Spark `mode("overwrite")` write to the dimension/fact tables, `restore`
+after.
+
+## A real lesson from building this
+
+Type 1 and Type 2 aren't interchangeable after the fact. During
+development, Type 1 was applied to a customer's city change first; when
+Type 2 logic was later applied to the *same* customer, there was nothing
+left to preserve — the old value was already gone. The choice between
+Type 1 and Type 2 has to be made **before** a change is applied, since
+Type 1 is irreversible and destroys the history Type 2 depends on.
+
+Re-running the Type 2 exercise on a customer that hadn't been touched by
+Type 1 produced the correct result: two rows, the old value closed out
+with a real `valid_to` date, the new value marked `is_current = TRUE`. 
 
 ## Repository layout
 
