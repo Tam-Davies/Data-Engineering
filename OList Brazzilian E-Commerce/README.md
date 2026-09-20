@@ -133,3 +133,75 @@ The Gold notebook uses overwrite mode when publishing tables, so rerunning it re
 The Silver notebook reports null counts and checks for impossible delivery dates, negative prices or payments, and review scores outside the expected 1-5 range. These checks currently report issues for inspection; they do not reject or quarantine invalid rows automatically.
 
 The Gold model uses generated surrogate keys via Spark `monotonically_increasing_id()`. These keys are suitable for the current local build but are not stable identifiers across complete rebuilds.
+
+## Surrogate Key Generation: `monotonically_increasing_id()` vs `row_number()`
+
+### The bug
+
+Every dimension table in the Gold layer needs a surrogate key — an internal integer ID that the fact table references, separate from the natural key (`customer_id`, `seller_id`, etc.) that comes from the source data. The first version of this pipeline generated those keys like this:
+
+```python
+dim_customer = customers_silver.select(
+    "customer_id", "customer_unique_id", "customer_city", "customer_state"
+).dropDuplicates(["customer_id"]) \
+ .withColumn("customer_key", F.monotonically_increasing_id())
+```
+
+This looked correct, ran without error, and produced a table with what appeared to be a clean auto-incrementing key column. Adding the primary key constraint in Postgres also succeeded:
+
+```sql
+ALTER TABLE dim_customer ADD PRIMARY KEY (customer_key);
+```
+
+The problem only surfaced later, when adding the foreign key on the fact table:
+
+```sql
+ALTER TABLE fact_orders ADD CONSTRAINT fk_customer
+    FOREIGN KEY (customer_key) REFERENCES dim_customer(customer_key);
+```
+
+```text
+ERROR:  insert or update on table "fact_orders" violates foreign key constraint "fk_customer"
+Key (customer_key)=(77309412371) is not present in table "dim_customer".
+```
+
+A direct count of orphaned rows confirmed the scale of the problem — not a handful of edge cases, but a systemic mismatch:
+
+```sql
+SELECT COUNT(*) FROM fact_orders f
+LEFT JOIN dim_customer c ON f.customer_key = c.customer_key
+WHERE c.customer_key IS NULL;
+```
+
+`51,951` orphaned rows out of ~118,000 — the surrogate keys referenced in `fact_orders` genuinely did not match the keys stored in `dim_customer`, despite both being built from the same underlying data.
+
+### Why it happened
+
+`F.monotonically_increasing_id()` generates values based on Spark's partition structure at the moment it is evaluated — it is not a value that gets computed once and frozen. Because Spark uses lazy evaluation, a DataFrame's transformations can be re-executed from scratch any time the DataFrame is used again — including implicitly, as part of a later join. `dim_customer` was built once with one set of IDs, written to Postgres, and then re-used (via a fresh read, or a re-triggered lazy computation) when `fact_orders` was built by joining against it. Spark re-ran the ID generation during that later use, and `monotonically_increasing_id()` is not guaranteed to reproduce the same values on a second evaluation — so the fact table's foreign keys ended up referencing IDs that no longer matched what was actually written to `dim_customer`.
+
+### The fix
+
+Two changes, used together:
+
+1. `row_number()` over an explicit ordering, instead of `monotonically_increasing_id()`. Deterministic and reproducible for a given input ordering, rather than tied to partition layout.
+2. `.cache()` plus an eager action (`.count()`), forcing Spark to materialize the DataFrame once and hold it in memory, so every downstream use of it — including the join that builds `fact_orders` — reads the same frozen set of keys instead of potentially re-triggering the key-generation logic.
+
+```python
+from pyspark.sql.window import Window
+
+window = Window.orderBy("customer_id")
+
+dim_customer = customers_silver.select(
+    "customer_id", "customer_unique_id", "customer_city", "customer_state"
+).dropDuplicates(["customer_id"]) \
+ .withColumn("customer_key", F.row_number().over(window))
+
+dim_customer.cache()
+dim_customer.count()   # forces materialization now, not lazily later
+```
+
+`fact_orders` was then rebuilt joining against this exact cached DataFrame object, within the same notebook run, and both were rewritten to Postgres. The foreign key constraint then applied cleanly, with zero orphaned rows.
+
+### The lesson
+
+`monotonically_increasing_id()` is safe within a single, unbroken computation, but not safe as a durable key across separate reads, re-evaluations, or writes — which is exactly the situation a multi-step Gold-layer build creates. `row_number()` with an explicit `.cache()` is the reliable pattern for surrogate keys that need to stay consistent across a join to a fact table and a subsequent write to a database.
