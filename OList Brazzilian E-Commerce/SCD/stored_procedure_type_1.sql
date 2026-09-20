@@ -13,3 +13,5 @@ BEGIN
 
 END;
 $$;
+
+-- CALL update_dim_customer_scd1();
