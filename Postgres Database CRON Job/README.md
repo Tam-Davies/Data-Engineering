@@ -106,3 +106,91 @@ Do not commit real passwords or other secrets to this repository.
 - The script assumes the downloaded file has the expected header and delimiter format.
 - The source URL must be reachable from the machine running the cron job.
 - The Bash script is intended for Linux, macOS, WSL, or another Unix-like environment. On Windows, use WSL or Git Bash with PostgreSQL tools available in the environment.
+
+## PostgreSQL WSL–pgAdmin Troubleshooting
+
+During the ETL setup, the Bash script initially failed to connect to PostgreSQL because the `postgres` user was configured for peer authentication.
+
+### Issues Encountered
+
+1. **Peer authentication failed**
+
+  ```text
+  FATAL: Peer authentication failed for user "postgres"
+  ```
+
+  **Solution:** Run PostgreSQL commands as the Linux `postgres` user:
+
+  ```bash
+  sudo -u postgres psql
+  ```
+
+2. **Database did not exist**
+
+  ```text
+  FATAL: database "first_cron_job" does not exist
+  ```
+
+  **Solution:** Create the database and required `access_log` table:
+
+  ```bash
+  sudo -u postgres createdb first_cron_job
+  ```
+
+3. **Database was not visible in pgAdmin**
+
+  The Bash script was using PostgreSQL running inside **WSL**, while pgAdmin was connected to a separate **Windows PostgreSQL** instance.
+
+4. **WSL PostgreSQL was only listening on localhost**
+
+  Initially, PostgreSQL was listening on:
+
+  ```text
+  127.0.0.1:5432
+  ```
+
+  PostgreSQL 18 was configured to listen only on localhost.
+
+  **Solution:** Update `/etc/postgresql/18/main/postgresql.conf` from:
+
+  ```text
+  #listen_addresses = '*'
+  ```
+
+  to:
+
+  ```text
+  listen_addresses = '*'
+  ```
+
+  Restart PostgreSQL and verify the listening address:
+
+  ```bash
+  sudo service postgresql restart
+  sudo ss -ltnp | grep 5432
+  ```
+
+  Final result:
+
+  ```text
+  0.0.0.0:5432
+  ```
+
+### Final Setup
+
+```text
+Windows
+  |
+  +-- pgAdmin
+      |
+      | 172.19.81.167:5432
+      v
+    WSL
+      |
+      +-- PostgreSQL 18
+          |
+          +-- first_cron_job
+              +-- access_log
+```
+
+This troubleshooting process highlighted the importance of understanding the difference between **PostgreSQL authentication, database instances, network interfaces, and client tools such as pgAdmin**.
